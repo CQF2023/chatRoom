@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聊天室</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7fc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #chat-container {
+      width: 60%;  /* 设置宽度为 60% */
+      max-width: 800px;  /* 设置最大宽度，确保不会太宽 */
+      display: flex;
+      flex-direction: column;
+      height: 80%;  /* 设置容器高度占屏幕的 80% */
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #messages {
+      flex: 1;  /* 占据剩余空间 */
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    .message {
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    #input-container {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background-color: #f4f7fc;
+    }
+
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    #send-button {
+      padding: 10px 15px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #send-button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-container">
+      <input type="text" id="message-input" placeholder="输入消息..." />
+      <button id="send-button" onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+
+  <script>
+let socket;
+
+function initializeWebSocket() {
+  // 创建新的 WebSocket 连接
+  socket = new WebSocket('ws://localhost:3000');
+
+  // WebSocket 连接成功时的回调
+  socket.onopen = function(event) {
+    console.log("WebSocket is connected.");
+  };
+
+  // WebSocket 错误时的回调
+  socket.onerror = function(error) {
+    console.error("WebSocket Error: ", error);
+  };
+
+  // WebSocket 连接关闭时的回调
+  socket.onclose = function(event) {
+    console.log("WebSocket is closed. Reconnecting...");
+    setTimeout(initializeWebSocket, 1000);  // 1秒后重新连接
+  };
+
+  // 接收到消息时更新聊天记录
+  socket.onmessage = function(event) {
+    const message = JSON.parse(event.data);
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.innerHTML = `<strong>${message.name}</strong> (${message.time}): <p>${message.content}</p>`;
+    document.getElementById('messages').appendChild(messageElement);
+    scrollToBottom();  // 确保页面自动滚动到最新消息
+  };
+}
+
+// 发送消息
+function sendMessage() {
+  const messageContent = document.getElementById('message-input').value.trim();
+  if (messageContent) {
+    const user = JSON.parse(sessionStorage.getItem('user'));
+    const messageData = {
+      name: user.name,  // 从 session 获取用户名
+      content: messageContent,
+      time: new Date().toLocaleTimeString(),  // 获取当前时间
+    };
+
+    // 检查 WebSocket 连接是否打开，只有在连接成功后才发送消息
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      console.log("Sending message:", messageData);
+      socket.send(JSON.stringify(messageData));
+      document.getElementById('message-input').value = '';  // 清空输入框
+    } else {
+      console.log("WebSocket is not open. Current state: " + (socket ? socket.readyState : 'undefined'));
+    }
+  }
+}
+
+// 确保页面滚动到最新消息
+function scrollToBottom() {
+  const messagesContainer = document.getElementById('messages');
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// 页面加载时初始化 WebSocket 连接并获取历史消息
+window.onload = function() {
+  initializeWebSocket();
+
+  // 从服务器获取历史消息并展示
+  fetch('/chat-history')
+    .then(response => response.json())
+    .then(messages => {
+      messages.forEach(message => {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+        messageElement.innerHTML = `<strong>${message.name}</strong> (${message.time}): <p>${message.content}</p>`;
+        document.getElementById('messages').appendChild(messageElement);
+      });
+      scrollToBottom();  // 确保页面滚动到最新消息
+    })
+    .catch(error => console.error('Error fetching chat history:', error));
+};
+
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人主页</title>
+  <style>
+    /* 页面整体样式 */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7fc;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #333;
+    }
+
+    /* 个人主页容器 */
+    #profile {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      width: 400px;
+      text-align: center;
+    }
+
+    /* 头像样式 */
+    #avatar {
+      border-radius: 50%;
+      border: 2px solid #ddd;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    #avatar:hover {
+      transform: scale(1.1);
+    }
+
+    /* 用户名样式 */
+    #name {
+      font-size: 24px;
+      color: #333;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    /* 默认用户名样式 */
+    h2 {
+      font-size: 18px;
+      color: #888;
+    }
+
+    /* 退出按钮样式 */
+    .logout-btn {
+      margin-top: 20px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .logout-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    /* 隐藏的文件输入 */
+    #fileInput {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="profile">
+    <h1>个人主页</h1>
+    <div>
+      <img id="avatar" src="" alt="头像" width="100" height="100" onclick="document.getElementById('fileInput').click();">
+      <h2 id="name">未设置名字</h2>
+    </div>
+    <button class="logout-btn" onclick="logout()">退出登录</button>
+    <!-- 隐藏的文件选择框 -->
+    <input type="file" id="fileInput" accept="image/*" onchange="uploadAvatar(event)">
+  </div>
+
+  <script>
+    // 从 sessionStorage 获取用户信息
+    const user = JSON.parse(sessionStorage.getItem('user'));
+
+    if (user) {
+      // 显示头像和名字
+      document.getElementById('avatar').src = user.avatar ? user.avatar : 'default-avatar.png';  // 默认头像处理
+      document.getElementById('name').textContent = user.name || '未设置名字';  // 默认名字处理
+    } else {
+      window.location.href = '/login';  // 如果没有用户信息，跳转到登录页面
+    }
+
+    // 退出登录功能
+    function logout() {
+      sessionStorage.removeItem('user');  // 清除 sessionStorage 中的用户信息
+      window.location.href = '/login';  // 跳转到登录页面
+    }
+
+    // 处理头像上传
+    // 处理头像上传
+  function uploadAvatar(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      // 发起头像上传请求
+      fetch('/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.avatar) {
+          // 更新头像显示
+          document.getElementById('avatar').src = data.avatar;
+          // 更新 sessionStorage 中的用户信息
+          const user = JSON.parse(sessionStorage.getItem('user'));
+          user.avatar = data.avatar;
+          sessionStorage.setItem('user', JSON.stringify(user));
+        } else {
+          alert('头像上传失败');
+        }
+      })
+      .catch(error => {
+        console.error('上传失败:', error);
+        alert('上传失败，请稍后再试');
+      });
+    }
+  }
+  </script>
+
+</body>
+</html>
